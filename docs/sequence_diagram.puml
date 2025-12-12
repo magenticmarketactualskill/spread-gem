@@ -1,0 +1,134 @@
+@startuml SpreadGem Synchronization Sequence
+
+actor "User" as User
+participant "Client A" as ClientA
+participant "Store A" as StoreA
+participant "Connection A" as ConnA
+participant "SpreadJS\nServer" as Server
+participant "Connection B" as ConnB
+participant "Store B" as StoreB
+participant "Client B" as ClientB
+
+== Initialization ==
+
+User -> ClientA : new('ws://server')
+activate ClientA
+ClientA -> ConnA : new(url)
+activate ConnA
+ClientA -> StoreA : new(connection)
+activate StoreA
+ClientA -> ConnA : connect()
+ConnA -> Server : WebSocket connect
+Server --> ConnA : Connected
+ConnA --> ClientA : Connected
+StoreA -> ConnA : on_message(handler)
+ClientA --> User : client
+deactivate ClientA
+
+User -> ClientB : new('ws://server')
+activate ClientB
+ClientB -> ConnB : new(url)
+activate ConnB
+ClientB -> StoreB : new(connection)
+activate StoreB
+ClientB -> ConnB : connect()
+ConnB -> Server : WebSocket connect
+Server --> ConnB : Connected
+ConnB --> ClientB : Connected
+StoreB -> ConnB : on_message(handler)
+ClientB --> User : client
+deactivate ClientB
+
+== Setting Value on Client A ==
+
+User -> StoreA : store[:key] = "value"
+activate StoreA
+StoreA -> StoreA : Update local data
+StoreA -> StoreA : notify_change(:set, "key", "value")
+StoreA -> ConnA : send(SET message)
+activate ConnA
+ConnA -> Server : {"type":"set","data":{"path":["key"],"value":"value"}}
+deactivate ConnA
+deactivate StoreA
+
+== Broadcasting to Client B ==
+
+Server -> ConnB : {"type":"set","data":{"path":["key"],"value":"value"}}
+activate ConnB
+ConnB -> StoreB : handle_message(message)
+activate StoreB
+StoreB -> StoreB : parse message
+StoreB -> StoreB : apply_remote_set(["key"], "value")
+StoreB -> StoreB : Update local data
+StoreB -> StoreB : notify_change(:set, "key", "value")
+StoreB --> ConnB : handled
+deactivate StoreB
+deactivate ConnB
+
+== Reading Value on Client B ==
+
+User -> StoreB : store[:key]
+activate StoreB
+StoreB --> User : "value"
+deactivate StoreB
+
+== Deleting Value on Client B ==
+
+User -> StoreB : store.delete(:key)
+activate StoreB
+StoreB -> StoreB : Delete from local data
+StoreB -> StoreB : notify_change(:delete, "key", "value")
+StoreB -> ConnB : send(DELETE message)
+activate ConnB
+ConnB -> Server : {"type":"delete","data":{"path":["key"]}}
+deactivate ConnB
+deactivate StoreB
+
+== Broadcasting Delete to Client A ==
+
+Server -> ConnA : {"type":"delete","data":{"path":["key"]}}
+activate ConnA
+ConnA -> StoreA : handle_message(message)
+activate StoreA
+StoreA -> StoreA : parse message
+StoreA -> StoreA : apply_remote_delete(["key"])
+StoreA -> StoreA : Delete from local data
+StoreA -> StoreA : notify_change(:delete, "key", nil)
+StoreA --> ConnA : handled
+deactivate StoreA
+deactivate ConnA
+
+== State Request ==
+
+User -> StoreB : request_state()
+activate StoreB
+StoreB -> ConnB : send(REQUEST_STATE message)
+activate ConnB
+ConnB -> Server : {"type":"request_state"}
+deactivate ConnB
+deactivate StoreB
+
+Server -> ConnA : {"type":"request_state"}
+activate ConnA
+ConnA -> StoreA : handle_message(message)
+activate StoreA
+StoreA -> StoreA : Get current state
+StoreA -> ConnA : send(STATE message)
+activate ConnA
+ConnA -> Server : {"type":"state","data":{"state":{...}}}
+deactivate ConnA
+deactivate StoreA
+deactivate ConnA
+
+Server -> ConnB : {"type":"state","data":{"state":{...}}}
+activate ConnB
+ConnB -> StoreB : handle_message(message)
+activate StoreB
+StoreB -> StoreB : apply_remote_state(state)
+StoreB -> StoreB : Replace local data
+StoreB -> StoreB : notify_change(:state_sync, nil, state)
+StoreB --> ConnB : handled
+deactivate StoreB
+deactivate ConnB
+
+@enduml

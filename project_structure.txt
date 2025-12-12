@@ -1,0 +1,44 @@
+.
+├── CHANGELOG.md
+├── Gemfile
+├── LICENSE.txt
+├── README.md
+├── Rakefile
+├── bin
+├── docs
+│   ├── class_diagram.png
+│   ├── class_diagram.puml
+│   ├── sequence_diagram.png
+│   └── sequence_diagram.puml
+├── examples
+│   ├── basic_usage.rb
+│   └── multi_client.rb
+├── features
+│   ├── basic_synchronization.feature
+│   ├── gem_structure.feature
+│   ├── nested_objects.feature
+│   ├── step_definitions
+│   │   └── spread_gem_steps.rb
+│   └── support
+│       └── env.rb
+├── lib
+│   ├── spread_gem
+│   │   ├── client.rb
+│   │   ├── connection.rb
+│   │   ├── errors.rb
+│   │   ├── message.rb
+│   │   ├── store.rb
+│   │   └── version.rb
+│   └── spread_gem.rb
+├── project_structure.txt
+├── spec
+│   ├── spec_helper.rb
+│   ├── spread_gem
+│   │   ├── errors_spec.rb
+│   │   ├── message_spec.rb
+│   │   ├── store_spec.rb
+│   │   └── version_spec.rb
+│   └── spread_gem_spec.rb
+└── spread-gem.gemspec
+
+10 directories, 31 files

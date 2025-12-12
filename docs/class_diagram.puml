@@ -1,0 +1,170 @@
+@startuml SpreadGem Class Diagram
+
+!define ENTITY class
+!define INTERFACE interface
+
+package "SpreadGem" {
+  
+  ENTITY SpreadGem {
+    + {static} connect(url, options) : Store
+    + {static} version() : String
+  }
+
+  ENTITY Client {
+    - @url : String
+    - @options : Hash
+    - @connection : Connection
+    - @store : Store
+    - @connected : Boolean
+    
+    + initialize(url, options)
+    + connect() : void
+    + disconnect() : void
+    + connected?() : Boolean
+    + on_disconnect(&block) : void
+    + on_error(&block) : void
+    + ping() : void
+  }
+
+  ENTITY Store {
+    - @connection : Connection
+    - @data : Concurrent::Hash
+    - @change_handlers : Array
+    - @mutex : Mutex
+    
+    + initialize(connection)
+    + [](key) : Object
+    + []=(key, value) : Object
+    + delete(key) : Object
+    + get_in(path) : Object
+    + set_in(path, value) : Object
+    + delete_in(path) : Object
+    + key?(key) : Boolean
+    + keys() : Array
+    + values() : Array
+    + size() : Integer
+    + empty?() : Boolean
+    + clear() : void
+    + each(&block) : void
+    + to_h() : Hash
+    + on_change(&block) : void
+    + request_state() : void
+    + state() : Hash
+  }
+
+  ENTITY Connection {
+    - @url : String
+    - @options : Hash
+    - @ws : WebSocket
+    - @connected : Boolean
+    - @closed : Boolean
+    - @message_handlers : Array
+    - @close_handlers : Array
+    - @error_handlers : Array
+    - @mutex : Mutex
+    
+    + initialize(url, options)
+    + connect() : void
+    + send(message) : void
+    + on_message(&block) : void
+    + on_close(&block) : void
+    + on_error(&block) : void
+    + close() : void
+    + open?() : Boolean
+  }
+
+  ENTITY Message {
+    - @type : String
+    - @data : Hash
+    
+    + initialize(type, data)
+    + to_json() : String
+    + {static} parse(json_string) : Message
+    + {static} set(path, value) : Message
+    + {static} delete(path) : Message
+    + {static} request_state() : Message
+    + {static} state(state) : Message
+    + {static} ping() : Message
+    + {static} pong() : Message
+  }
+
+  ENTITY Error {
+    <<StandardError>>
+  }
+
+  ENTITY ConnectionError {
+    <<Error>>
+  }
+
+  ENTITY ConnectionClosedError {
+    <<Error>>
+  }
+
+  ENTITY InvalidMessageError {
+    <<Error>>
+  }
+
+  ENTITY TimeoutError {
+    <<Error>>
+  }
+
+  ENTITY ClosedConnectionError {
+    <<Error>>
+  }
+
+  ENTITY SynchronizationError {
+    <<Error>>
+  }
+
+  ' Relationships
+  SpreadGem ..> Client : creates
+  SpreadGem ..> Store : returns
+  
+  Client *-- Connection : has
+  Client *-- Store : has
+  
+  Store o-- Connection : uses
+  Store ..> Message : creates
+  
+  Connection ..> Message : sends/receives
+  
+  Error <|-- ConnectionError
+  Error <|-- ConnectionClosedError
+  Error <|-- InvalidMessageError
+  Error <|-- TimeoutError
+  Error <|-- ClosedConnectionError
+  Error <|-- SynchronizationError
+  
+  Client ..> ConnectionError : raises
+  Connection ..> ConnectionError : raises
+  Connection ..> TimeoutError : raises
+  Store ..> SynchronizationError : raises
+  Message ..> InvalidMessageError : raises
+}
+
+note right of SpreadGem
+  Main module providing
+  convenience methods
+end note
+
+note right of Client
+  Entry point for connecting
+  to SpreadJS server
+end note
+
+note right of Store
+  Thread-safe synchronized
+  data store with hash-like API
+end note
+
+note right of Connection
+  WebSocket connection manager
+  with auto-reconnect
+end note
+
+note right of Message
+  Protocol message serialization
+  and deserialization
+end note
+
+@enduml
